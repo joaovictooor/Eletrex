@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Circuito com Análise Completa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+    </script>
+    <style>
+        .bloco-S { border-color: #3b82f6; background-color: #eff6ff; }
+        .bloco-P { border-color: #10b981; background-color: #ecfdf5; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 min-h-screen py-10 px-4">
+
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
+        <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">⚡ Simulador de Circuito Misto</h1>
+        <p class="text-center text-gray-600 mb-8">Análise completa: resolução automática do circuito, tabela de dados e passos detalhados em LaTeX.</p>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex items-center gap-3">
+                <label for="tensao-fonte" class="font-semibold text-gray-700">Tensão da Fonte (V):</label>
+                <input type="number" id="tensao-fonte" value="12" min="0.1" step="any" class="w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex items-center gap-3">
+                <label for="tipo-raiz" class="font-semibold text-gray-700">Tipo do Bloco Principal:</label>
+                <select id="tipo-raiz" class="px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="S">Série (S)</option>
+                    <option value="P">Paralelo (P)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-3">🛠️ Estrutura do Circuito</h2>
+            <div id="container-circuito" class="p-4 border-2 border-dashed border-gray-300 rounded-xl min-h-[150px]"></div>
+        </div>
+
+        <div class="text-center mb-8">
+            <button id="btn-calcular" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-md transition duration-200 transform hover:-translate-y-0.5">
+                📊 Calcular e Analisar Circuito
+            </button>
+        </div>
+
+        <div id="painel-resultados" class="hidden border-t pt-6 space-y-8">
+            
+            <div class="text-center">
+                <h3 class="text-xl font-bold text-gray-900 mb-3 text-left">🎨 Esquema Elétrico Proporcional</h3>
+                <div class="bg-gray-900 p-4 rounded-xl flex justify-center overflow-auto max-h-[600px] mb-4">
+                    <canvas id="canvas-circuito" class="bg-gray-900 shadow-inner rounded-lg"></canvas>
+                </div>
+                <button id="btn-salvar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition duration-150 inline-flex items-center gap-2">
+                    📥 Baixar Imagem do Circuito
+                </button>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">📈 Resultados Gerais</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center">
+                        <span class="block text-sm text-blue-600 font-medium uppercase">Resistência Equivalente</span>
+                        <span id="res-req" class="text-2xl font-bold text-blue-900">0.00 Ω</span>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100 text-center">
+                        <span class="block text-sm text-green-600 font-medium uppercase">Corrente Total</span>
+                        <span id="res-corrente" class="text-2xl font-bold text-green-900">0.00 A</span>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center">
+                        <span class="block text-sm text-purple-600 font-medium uppercase">Potência Total</span>
+                        <span id="res-potencia" class="text-2xl font-bold text-purple-900">0.00 W</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">🔍 Dados Detalhados por Componente</h3>
+                <div class="overflow-x-auto rounded-lg border shadow-sm">
+                    <table class="w-full text-left border-collapse bg-white overflow-hidden">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-sm uppercase">
+                                <th class="p-3.5">Componente</th>
+                                <th class="p-3.5">Resistência ($\Omega$)</th>
+                                <th class="p-3.5">Tensão ($V$)</th>
+                                <th class="p-3.5">Corrente ($A$)</th>
+                                <th class="p-3.5">Potência ($W$)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-detalhes" class="divide-y text-sm text-gray-700">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">Docs 📝 Memorial de Cálculo Passo a Passo</h3>
+                <div id="memorial-latex" class="space-y-4 text-base overflow-x-auto p-2 bg-white rounded-lg border">
+                    </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let idCounter = 0;
+        let estruturaCircuito = { id: 'raiz', tipo: 'S', elementos: [] };
+        let passosCalculo = []; 
+        let contadorResistoresGlobais = 1;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const tipoRaizSelect = document.getElementById('tipo-raiz');
+            tipoRaizSelect.addEventListener('change', (e) => {
+                estruturaCircuito.tipo = e.target.value;
+                renderizarCircuito();
+            });
+            document.getElementById('btn-calcular').addEventListener('click', executarAcoes);
+            document.getElementById('btn-salvar').addEventListener('click', baixarImagemCanvas);
+            renderizarCircuito();
+        });
+
+        function renderizarCircuito() {
+            const container = document.getElementById('container-circuito');
+            container.innerHTML = '';
+            container.appendChild(criarHTMLBloco(estruturaCircuito, true));
+        }
+
+        function criarHTMLBloco(bloco, isRaiz = false) {
+            const div = document.createElement('div');
+            div.className = `p-4 my-2 border-2 rounded-xl shadow-sm transition-all bloco-${bloco.tipo}`;
+            
+            const header = document.createElement('div');
+            header.className = "flex flex-wrap items-center justify-between gap-2 mb-3";
+            header.innerHTML = `<span class="font-bold text-sm uppercase tracking-wide ${bloco.tipo === 'S' ? 'text-blue-700' : 'text-emerald-700'}">📦 Bloco ${bloco.tipo === 'S' ? 'Em Série' : 'Em Paralelo'} ${isRaiz ? '(Principal)' : ''}</span>`;
+
+            const acoes = document.createElement('div');
+            acoes.className = "flex gap-2 text-xs";
+
+            const btnAddResistor = document.createElement('button');
+            btnAddResistor.className = "bg-gray-800 text-white px-2 py-1 rounded hover:bg-gray-700";
+            btnAddResistor.innerText = "➕ Resistor";
+            btnAddResistor.onclick = () => { bloco.elementos.push({ id: 'r_' + (++idCounter), valor: 10 }); renderizarCircuito(); };
+
+            const btnAddSubBloco = document.createElement('button');
+            btnAddSubBloco.className = "bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500";
+            btnAddSubBloco.innerText = "➕ Sub-Bloco";
+            btnAddSubBloco.onclick = () => { bloco.elementos.push({ id: 'b_' + (++idCounter), tipo: 'P', elementos: [] }); renderizarCircuito(); };
+
+            acoes.appendChild(btnAddResistor);
+            acoes.appendChild(btnAddSubBloco);
+
+            if (!isRaiz) {
+                const btnMudarTipo = document.createElement('button');
+                btnMudarTipo.className = "bg-amber-500 text-white px-2 py-1 rounded hover:bg-amber-600";
+                btnMudarTipo.innerText = `Para ${bloco.tipo === 'S' ? 'Paralelo' : 'Série'}`;
+                btnMudarTipo.onclick = () => { bloco.tipo = bloco.tipo === 'S' ? 'P' : 'S'; renderizarCircuito(); };
+                acoes.appendChild(btnMudarTipo);
+
+                const btnDeletar = document.createElement('button');
+                btnDeletar.className = "bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600";
+                btnDeletar.innerText = "🗑️";
+                btnDeletar.onclick = () => { removerElementoPorId(estruturaCircuito, bloco.id); renderizarCircuito(); };
+                acoes.appendChild(btnDeletar);
+            }
+
+            header.appendChild(acoes);
+            div.appendChild(header);
+
+            const cFilhos = document.createElement('div');
+            cFilhos.className = "pl-4 border-l-2 border-gray-300 space-y-2";
+
+            if (bloco.elementos.length === 0) {
+                cFilhos.innerHTML = `<p class="text-xs text-gray-400 italic py-2">Bloco vazio.</p>`;
+            }
+
+            bloco.elementos.forEach(elem => {
+                if (elem.elementos) {
+                    cFilhos.appendChild(criarHTMLBloco(elem));
+                } else {
+                    const divRes = document.createElement('div');
+                    divRes.className = "flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm text-sm max-w-sm";
+                    divRes.innerHTML = `
+                        <span class="font-medium text-gray-600">R:</span>
+                        <input type="number" min="0" value="${elem.valor}" class="w-16 px-1 py-0.5 border rounded outline-none text-center focus:ring-1 focus:ring-blue-500" />
+                        <span class="text-gray-500">Ω</span>
+                    `;
+                    divRes.querySelector('input').addEventListener('input', (e) => { elem.valor = parseFloat(e.target.value) || 0; });
+
+                    const btnRemoverRes = document.createElement('button');
+                    btnRemoverRes.className = "text-red-500 hover:text-red-700 ml-auto font-bold px-1";
+                    btnRemoverRes.innerText = "✕";
+                    btnRemoverRes.onclick = () => { removerElementoPorId(estruturaCircuito, elem.id); renderizarCircuito(); };
+                    divRes.appendChild(btnRemoverRes);
+
+                    cFilhos.appendChild(divRes);
+                }
+            });
+
+            div.appendChild(cFilhos);
+            return div;
+        }
+
+        function removerElementoPorId(objetoAtual, idBuscado) {
+            if (!objetoAtual.elementos) return false;
+            const index = objetoAtual.elementos.findIndex(e => e.id === idBuscado);
+            if (index !== -1) { objetoAtual.elementos.splice(index, 1); return true; }
+            for (let child of objetoAtual.elementos) {
+                if (child.elementos) { if (removerElementoPorId(child, idBuscado)) return true; }
+            }
+            return false;
+        }
+
+        // ATRIBUI IDENTIFICADORES TÉCNICOS PARA AS CONTAS
+        function rotularResistores(bloco) {
+            bloco.elementos.forEach(elem => {
+                if (elem.elementos) {
+                    rotularResistores(elem);
+                } else {
+                    elem.tagMapeada = `R_{${contadorResistoresGlobais++}}`;
+                }
+            });
+        }
+
+        // FASE 1: CALCULAR RESISTÊNCIA EQUIVALENTE
+        function calcularReqEGerarLatex(bloco, numBloco = { val: 1 }) {
+            if (!bloco.elementos || bloco.elementos.length === 0) { bloco.req = 0; return 0; }
+
+            let valores = bloco.elementos.map(elem => elem.elementos ? calcularReqEGerarLatex(elem, numBloco) : elem.valor);
+            let nomeBloco = bloco.id === 'raiz' ? 'R_{eqTotal}' : `R_{eqB${numBloco.val++}}`;
+            bloco.tagMapeada = nomeBloco; 
+            let strLatex = "";
+
+            if (bloco.tipo === 'S') {
+                bloco.req = valores.reduce((acc, cur) => acc + cur, 0);
+                let expressaoSoma = bloco.elementos.map(e => e.tagMapeada).join(' + ');
+                let expressaoValores = valores.map(v => `${v.toFixed(1)}`).join(' + ');
+                strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
+            } else {
+                if (valores.includes(0)) {
+                    bloco.req = 0;
+                    strLatex = `$$${nomeBloco} = 0\\ \\Omega\\ (Curto-circuito)$$`;
+                } else {
+                    bloco.req = 1 / valores.reduce((acc, cur) => acc + (1 / cur), 0);
+                    let expressaoInversos = bloco.elementos.map(e => `\\frac{1}{${e.tagMapeada}}`).join(' + ');
+                    let expressaoValores = valores.map(v => `\\frac{1}{${v.toFixed(1)}}`).join(' + ');
+                    strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
+                }
+            }
+
+            passosCalculo.push({ tipo: 'req', eq: strLatex });
+            return bloco.req;
+        }
+
+        // FASE 2: CALCULAR TENSÃO E CORRENTE COMPONENTE POR COMPONENTE
+        function calcularGrandezasEGerarLatex(bloco, tensaoAplicada, linhasTabela) {
+            bloco.tensao = tensaoAplicada;
+            bloco.corrente = bloco.req === 0 ? 0 : bloco.tensao / bloco.req;
+
+            bloco.elementos.forEach(elem => {
+                if (bloco.tipo === 'S') {
+                    // Em série, a corrente é igual e a tensão divide proporcionalmente V = I * R
+                    let iComponente = bloco.corrente;
+                    let rComponente = elem.elementos ? elem.req : elem.valor;
+                    let vComponente = iComponente * rComponente;
+
+                    let passoLatex = `$$V_{${elem.tagMapeada}} = I_{${bloco.tagMapeada}} \\cdot ${elem.elementos ? 'R_{eq}' : 'R'} = ${iComponente.toFixed(2)}\\ A \\cdot ${rComponente.toFixed(1)}\\ \\Omega = ${vComponente.toFixed(2)}\\ V$$`;
+                    passosCalculo.push({ tipo: 'grandezas', eq: passoLatex });
+
+                    if (elem.elementos) {
+                        calcularGrandezasEGerarLatex(elem, vComponente, linhasTabela);
+                    } else {
+                        linhasTabela.push({ tag: elem.tagMapeada, r: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
+                    }
+                } else {
+                    // Em paralelo, a tensão é igual e a corrente divide de acordo com a resistência I = V / R
+                    let vComponente = bloco.tensao;
+                    let rComponente = elem.elementos ? elem.req : elem.valor;
+                    let iComponente = rComponente === 0 ? 0 : vComponente / rComponente;
+
+                    let passoLatex = `$$I_{${elem.tagMapeada}} = \\frac{V_{${bloco.tagMapeada}}}{${elem.elementos ? 'R_{eq}' : 'R'}} = \\frac{${vComponente.toFixed(2)}\\ V}{${rComponente.toFixed(1)}\\ \\Omega} = ${iComponente.toFixed(2)}\\ A$$`;
+                    passosCalculo.push({ tipo: 'grandezas', eq: passoLatex });
+
+                    if (elem.elementos) {
+                        calcularGrandezasEGerarLatex(elem, vComponente, linhasTabela);
+                    } else {
+                        linhasTabela.push({ tag: elem.tagMapeada, r: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
+                    }
+                }
+            });
+        }
+
+        // DIMENSIONAMENTO DINÂMICO DO CANVAS
+        function calcularDimensoesNecessarias(bloco) {
+            let dimensoes = { largura: 150, alturaSurgida: 120 };
+            if (!bloco.elementos || bloco.elementos.length === 0) return dimensoes;
+
+            if (bloco.tipo === 'S') {
+                let larguraAcumulada = 0;
+                let maiorAltura = 120;
+                bloco.elementos.forEach(elem => {
+                    if (elem.elementos) {
+                        let d = calcularDimensoesNecessarias(elem);
+                        larguraAcumulada += d.largura;
+                        if (d.alturaSurgida > maiorAltura) maiorAltura = d.alturaSurgida;
+                    } else {
+                        larguraAcumulada += 130;
+                    }
+                });
+                dimensoes.largura = Math.max(larguraAcumulada, 150);
+                dimensoes.alturaSurgida = maiorAltura;
+            } else {
+                let maiorLarguraInterna = 150;
+                let alturaAcumulada = 0;
+                bloco.elementos.forEach(elem => {
+                    if (elem.elementos) {
+                        let d = calcularDimensoesNecessarias(elem);
+                        if (d.largura > maiorLarguraInterna) maiorLarguraInterna = d.largura;
+                        alturaAcumulada += d.alturaSurgida;
+                    } else {
+                        alturaAcumulada += 65;
+                    }
+                });
+                dimensoes.largura = maiorLarguraInterna + 80;
+                dimensoes.alturaSurgida = Math.max(alturaAcumulada, 130);
+            }
+            return dimensoes;
+        }
+
+        // MOTOR RENDERIZADOR CANVAS
+        function desenharEsquema(bloco, vFonte) {
+            const canvas = document.getElementById('canvas-circuito');
+            const ctx = canvas.getContext('2d');
+            
+            let m = calcularDimensoesNecessarias(bloco);
+            canvas.width = Math.max(m.largura + 180, 850); 
+            canvas.height = Math.max(m.alturaSurgida + 150, 385);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#f8fafc';
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 13px sans-serif';
+
+            let margemEsquerda = 80;
+            let margemDireita = canvas.width - 60;
+            let yLinhaSuperior = 80;
+            let yLinhaInferior = canvas.height - 80;
+
+            // Fonte de Tensão
+            ctx.beginPath();
+            ctx.moveTo(margemEsquerda, yLinhaSuperior);
+            ctx.lineTo(margemEsquerda, (canvas.height/2) - 30);
+            ctx.moveTo(margemEsquerda, (canvas.height/2) + 30);
+            ctx.lineTo(margemEsquerda, yLinhaInferior);
+            ctx.stroke();
+
+            let yCentroFonte = canvas.height / 2;
+            ctx.beginPath();
+            ctx.moveTo(65, yCentroFonte - 5); ctx.lineTo(95, yCentroFonte - 5);
+            ctx.moveTo(72, yCentroFonte + 5); ctx.lineTo(88, yCentroFonte + 5);
+            ctx.stroke();
+            
+            ctx.fillText(`+`, 76, yCentroFonte - 15);
+            ctx.fillText(`-`, 77, yCentroFonte + 22);
+            ctx.fillText(`${vFonte}V`, 25, yCentroFonte + 4);
+
+            // Linha inferior limpa de retorno
+            ctx.beginPath();
+            ctx.moveTo(margemEsquerda, yLinhaInferior);
+            ctx.lineTo(margemDireita, yLinhaInferior);
+            ctx.lineTo(margemDireita, yLinhaSuperior);
+            ctx.stroke();
+
+            let larguraUtil = margemDireita - margemEsquerda;
+            desenharComponenteGenerico(ctx, bloco, margemEsquerda, yLinhaSuperior, larguraUtil);
+        }
+
+        function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
+            if (!bloco.elementos || bloco.elementos.length === 0) {
+                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + largura, y); ctx.stroke();
+                return;
+            }
+
+            if (bloco.tipo === 'S') {
+                let passoX = largura / bloco.elementos.length;
+                bloco.elementos.forEach((elem, idx) => {
+                    let currentX = x + (idx * passoX);
+                    if (elem.elementos) {
+                        desenharComponenteGenerico(ctx, elem, currentX, y, passoX);
+                    } else {
+                        let xResistor = currentX + (passoX / 2) - 25;
+                        desenharResistorHorizontal(ctx, xResistor, y, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
+                        ctx.beginPath();
+                        ctx.moveTo(currentX, y); ctx.lineTo(xResistor, y);
+                        ctx.moveTo(xResistor + 50, y); ctx.lineTo(currentX + passoX, y);
+                        ctx.stroke();
+                    }
+                });
+            } else {
+                let qtd = bloco.elementos.length;
+                let xBarramentoEsquerdo = x + 35;
+                let xBarramentoDireito = x + largura - 35;
+
+                ctx.beginPath();
+                ctx.moveTo(x, y); ctx.lineTo(xBarramentoEsquerdo, y);
+                ctx.moveTo(xBarramentoDireito, y); ctx.lineTo(x + largura, y);
+                ctx.stroke();
+
+                let alturaInterna = Math.max(qtd * 55, 110);
+                let yTopoBarra = y - (alturaInterna / 2) + 25;
+                let yBaseBarra = y + (alturaInterna / 2) - 25;
+
+                ctx.beginPath();
+                ctx.moveTo(xBarramentoEsquerdo, yTopoBarra); ctx.lineTo(xBarramentoEsquerdo, yBaseBarra);
+                ctx.moveTo(xBarramentoDireito, yTopoBarra); ctx.lineTo(xBarramentoDireito, yBaseBarra);
+                ctx.stroke();
+
+                ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, y, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(xBarramentoDireito, y, 5, 0, Math.PI * 2); ctx.fill();
+
+                let passoY = (yBaseBarra - yTopoBarra) / (qtd > 1 ? (qtd - 1) : 1);
+
+                bloco.elementos.forEach((elem, idx) => {
+                    let localY = qtd === 1 ? y : (yTopoBarra + (passoY * idx));
+
+                    ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, localY, 3, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(xBarramentoDireito, localY, 3, 0, Math.PI * 2); ctx.fill();
+
+                    if (elem.elementos) {
+                        let subLargura = xBarramentoDireito - xBarramentoEsquerdo;
+                        desenharComponenteGenerico(ctx, elem, xBarramentoEsquerdo, localY, subLargura);
+                    } else {
+                        let xRes = xBarramentoEsquerdo + ((xBarramentoDireito - xBarramentoEsquerdo) / 2) - 25;
+                        desenharResistorHorizontal(ctx, xRes, localY, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
+                        ctx.beginPath();
+                        ctx.moveTo(xBarramentoEsquerdo, localY); ctx.lineTo(xRes, localY);
+                        ctx.moveTo(xRes + 50, localY); ctx.lineTo(xBarramentoDireito, localY);
+                        ctx.stroke();
+                    }
+                });
+            }
+        }
+
+        function desenharResistorHorizontal(ctx, x, y, valor, tag) {
+            ctx.save();
+            ctx.fillStyle = "#3b82f6"; 
+            ctx.fillRect(x, y - 12, 50, 24);
+            ctx.strokeStyle = "#ffffff";
+            ctx.strokeRect(x, y - 12, 50, 24);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 10px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(`${tag}`, x + 25, y - 2);
+            ctx.fillText(`${valor}Ω`, x + 25, y + 9);
+            ctx.restore();
+        }
+
+        function baixarImagemCanvas() {
+            const canvas = document.getElementById('canvas-circuito');
+            const link = document.createElement('a');
+            link.download = 'circuito-misto-analisado.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // CONTROLADOR PRINCIPAL DA EXECUÇÃO
+        function executarAcoes() {
+            const vFonte = parseFloat(document.getElementById('tensao-fonte').value) || 0;
+            
+            // Inicializa contadores e históricos
+            passosCalculo = [];
+            contadorResistoresGlobais = 1;
+
+            rotularResistores(estruturaCircuito);
+            
+            const reqTotal = calcularReqEGerarLatex(estruturaCircuito);
+
+            if (reqTotal === 0) {
+                alert("Por favor, monte seu circuito inserindo componentes antes de calcular.");
+                return;
+            }
+
+            const correnteTotal = vFonte / reqTotal;
+            const potenciaTotal = vFonte * correnteTotal;
+
+            // Insere as equações globais de fechamento da malha principal
+            passosCalculo.push({ tipo: 'malha', eq: `$$I_{Total} = \\frac{V_{Fonte}}{R_{eqTotal}} = \\frac{${vFonte.toFixed(1)}}{${reqTotal.toFixed(2)}} = ${correnteTotal.toFixed(2)}\\ A$$` });
+            passosCalculo.push({ tipo: 'malha', eq: `$$P_{Total} = V_{Fonte} \\cdot I_{Total} = ${vFonte.toFixed(1)} \\cdot ${correnteTotal.toFixed(2)} = ${potenciaTotal.toFixed(2)}\\ W$$` });
+
+            // Calcula dinamicamente as tensões e correntes individuais
+            let linhasTabela = [];
+            calcularGrandezasEGerarLatex(estruturaCircuito, vFonte, linhasTabela);
+
+            // Interface: Modifica os valores gerais dos cards superiores
+            document.getElementById('res-req').innerText = `${reqTotal.toFixed(2)} Ω`;
+            document.getElementById('res-corrente').innerText = `${correnteTotal.toFixed(2)} A`;
+            document.getElementById('res-potencia').innerText = `${potenciaTotal.toFixed(2)} W`;
+
+            // Interface: Constrói as linhas estáveis na tabela de dados por componente
+            const tbody = document.getElementById('tabela-detalhes');
+            tbody.innerHTML = '';
+            linhasTabela.forEach((linha, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = idx % 2 === 0 ? 'bg-gray-50 hover:bg-slate-100 transition' : 'bg-white hover:bg-slate-100 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-blue-600">$${linha.tag}$</td>
+                    <td class="p-3">${linha.r.toFixed(2)} $\Omega$</td>
+                    <td class="p-3 font-medium text-amber-600">${linha.v.toFixed(2)} V</td>
+                    <td class="p-3 font-medium text-emerald-600">${linha.i.toFixed(2)} A</td>
+                    <td class="p-3 text-purple-600">${linha.p.toFixed(2)} W</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Interface: Separa e estrutura o painel do memorial de cálculos em blocos lógicos ordenados
+            const containerLatex = document.getElementById('memorial-latex');
+            containerLatex.innerHTML = '';
+
+            let categorias = [
+                { id: 'req', titulo: '1. Simplificação das Resistências Equivalentes ($R_{eq}$)' },
+                { id: 'malha', titulo: '2. Análise da Malha Principal da Fonte' },
+                { id: 'grandezas', titulo: '3. Queda de Tensão ($V$) e Corrente ($I$) por Elemento' }
+            ];
+
+            categorias.forEach(cat => {
+                let filtrados = passosCalculo.filter(p => p.tipo === cat.id);
+                if(filtrados.length > 0) {
+                    let divCat = document.createElement('div');
+                    divCat.className = "mb-6";
+                    divCat.innerHTML = `<h4 class="font-bold text-slate-800 text-base border-b pb-1 mb-3 text-left">${cat.titulo}</h4>`;
+                    
+                    filtrados.forEach((item, idx) => {
+                        divCat.innerHTML += `
+                            <div class="p-2.5 my-2 bg-slate-50 border-l-4 border-blue-500 rounded text-sm">
+                                <span class="text-xs text-slate-400 font-bold uppercase block mb-0.5">Etapa #${idx+1}</span>
+                                <div>${item.eq}</div>
+                            </div>`;
+                    });
+                    containerLatex.appendChild(divCat);
+                }
+            });
+
+            // Avisa o MathJax para re-renderizar todas as novas fórmulas em LaTeX injetadas
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+
+            document.getElementById('painel-resultados').classList.remove('hidden');
+            desenharEsquema(estruturaCircuito, vFonte);
+            document.getElementById('painel-resultados').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
