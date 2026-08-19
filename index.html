@@ -28,12 +28,17 @@
 
     <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8">
         <h1 class="text-3xl font-bold text-center text-gray-900 mb-2">⚡ Simulador de Circuito Misto</h1>
-        <p class="text-center text-gray-600 mb-8">Análise completa: resolução automática do circuito, tabela de dados e passos detalhados em LaTeX.</p>
+        <p class="text-center text-gray-600 mb-8">Análise completa: resolução automática de circuitos com Resistores e Capacitores (Fontes V/A).</p>
 
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex items-center gap-3">
-                <label for="tensao-fonte" class="font-semibold text-gray-700">Tensão da Fonte (V):</label>
-                <input type="number" id="tensao-fonte" value="12" min="0.1" step="any" class="w-24 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <label for="tipo-fonte" class="font-semibold text-gray-700">Tipo de Fonte:</label>
+                <select id="tipo-fonte" class="px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="V">Tensão (V)</option>
+                    <option value="I">Corrente (A)</option>
+                </select>
+                <input type="number" id="valor-fonte" value="12" min="0.000001" step="any" class="w-28 px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <span id="unidade-fonte" class="font-bold text-gray-600">V</span>
             </div>
             <div class="flex items-center gap-3">
                 <label for="tipo-raiz" class="font-semibold text-gray-700">Tipo do Bloco Principal:</label>
@@ -71,7 +76,7 @@
                 <h2 class="text-2xl font-bold text-gray-900 mb-4">📈 Resultados Gerais</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center">
-                        <span class="block text-sm text-blue-600 font-medium uppercase">Resistência Equivalente</span>
+                        <span class="block text-sm text-blue-600 font-medium uppercase">Impedância / Equivalência</span>
                         <span id="res-req" class="text-2xl font-bold text-blue-900">0.00 Ω</span>
                     </div>
                     <div class="bg-green-50 p-4 rounded-xl border border-green-100 text-center">
@@ -79,7 +84,7 @@
                         <span id="res-corrente" class="text-2xl font-bold text-green-900">0.00 A</span>
                     </div>
                     <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center">
-                        <span class="block text-sm text-purple-600 font-medium uppercase">Potência Total</span>
+                        <span class="block text-sm text-purple-600 font-medium uppercase">Potência / Tensão Total</span>
                         <span id="res-potencia" class="text-2xl font-bold text-purple-900">0.00 W</span>
                     </div>
                 </div>
@@ -92,7 +97,11 @@
                         <thead>
                             <tr class="bg-slate-800 text-white text-sm uppercase">
                                 <th class="p-3.5">Componente</th>
+<<<<<<< HEAD
                                 <th class="p-3.5">Resistência</th>
+=======
+                                <th class="p-3.5">Valor Nominal</th>
+>>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                                 <th class="p-3.5">Tensão</th>
                                 <th class="p-3.5">Corrente</th>
                                 <th class="p-3.5">Potência</th>
@@ -105,7 +114,7 @@
             </div>
 
             <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">Docs 📝 Memorial de Cálculo Passo a Passo</h3>
+                <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">📝 Memorial de Cálculo Passo a Passo</h3>
                 <div id="memorial-latex" class="space-y-4 text-base overflow-x-auto p-2 bg-white rounded-lg border">
                 </div>
             </div>
@@ -118,7 +127,56 @@
         let redonda = 4;
         let estruturaCircuito = { id: 'raiz', tipo: 'S', elementos: [] };
         let passosCalculo = []; 
-        let contadorResistoresGlobais = 1;
+        let contadorComponentesGlobais = { R: 1, C: 1 };
+
+        // Regra de precisão dinâmica: > 3 casas decimais -> 3 casas; senão -> 2 casas
+        function formatarValorDinamico(valor) {
+            if (valor === 0 || isNaN(valor)) return "0.00";
+            
+            const partes = valor.toString().split('.');
+            if (partes.length > 1 && partes[1].length > 3) {
+                return valor.toFixed(3);
+            }
+            return valor.toFixed(2);
+        }
+
+        function formatarUnidadeEngenharia(valor, unidade) {
+            if (valor === 0 || isNaN(valor)) return `0.00 ${unidade}`;
+            const absValor = Math.abs(valor);
+            
+            if (absValor >= 1e6) {
+                return `${formatarValorDinamico(valor / 1e6)} M${unidade}`;
+            } else if (absValor >= 1e3) {
+                return `${formatarValorDinamico(valor / 1e3)} k${unidade}`;
+            } else if (absValor >= 1) {
+                return `${formatarValorDinamico(valor)} ${unidade}`;
+            } else if (absValor >= 1e-3) {
+                return `${formatarValorDinamico(valor * 1e3)} m${unidade}`;
+            } else if (absValor >= 1e-6) {
+                return `${formatarValorDinamico(valor * 1e6)} µ${unidade}`;
+            } else {
+                return `${formatarValorDinamico(valor * 1e9)} n${unidade}`;
+            }
+        }
+
+        // Função auxiliar ajustada para a formatação de casas decimais do LaTeX
+        function formatarNumeroLatex(valor) {
+            if (valor === 0 || isNaN(valor)) return "0";
+            const absValor = Math.abs(valor);
+
+            // Usa notação científica apenas para valores extremamente extremos
+            if (absValor < 0.0001 || absValor >= 1000000) {
+                return valor.toExponential(2).replace('e', '\\times 10^{') + '}';
+            }
+
+            // Converte para string preservando até 3 casas decimais max sem zeros desnecessários no final
+            let strValor = valor.toFixed(5);
+            
+            // Remove zeros sobressalentes à direita após a vírgula (ex: 1.200 vira 1.2, 1.000 vira 1)
+            strValor = strValor.replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+
+            return strValor;
+        }
 
         // Função para formatar valores com numeração de engenharia (m, k, M, etc)
         function formatarUnidadeEngenharia(valor, unidade) {
@@ -146,6 +204,12 @@
                 estruturaCircuito.tipo = e.target.value;
                 renderizarCircuito();
             });
+
+            const tipoFonteSelect = document.getElementById('tipo-fonte');
+            tipoFonteSelect.addEventListener('change', (e) => {
+                document.getElementById('unidade-fonte').innerText = e.target.value === 'V' ? 'V' : 'A';
+            });
+
             document.getElementById('btn-calcular').addEventListener('click', executarAcoes);
             document.getElementById('btn-salvar').addEventListener('click', baixarImagemCanvas);
             renderizarCircuito();
@@ -166,12 +230,17 @@
             header.innerHTML = `<span class="font-bold text-sm uppercase tracking-wide ${bloco.tipo === 'S' ? 'text-blue-700' : 'text-emerald-700'}">📦 Bloco ${bloco.tipo === 'S' ? 'Em Série' : 'Em Paralelo'} ${isRaiz ? '(Principal)' : ''}</span>`;
 
             const acoes = document.createElement('div');
-            acoes.className = "flex gap-2 text-xs";
+            acoes.className = "flex gap-2 text-xs flex-wrap";
 
             const btnAddResistor = document.createElement('button');
             btnAddResistor.className = "bg-gray-800 text-white px-2 py-1 rounded hover:bg-gray-700";
-            btnAddResistor.innerText = "➕ Resistor";
-            btnAddResistor.onclick = () => { bloco.elementos.push({ id: 'r_' + (++idCounter), valor: 10 }); renderizarCircuito(); };
+            btnAddResistor.innerText = "➕ Resistor (R)";
+            btnAddResistor.onclick = () => { bloco.elementos.push({ id: 'r_' + (++idCounter), tipoComp: 'R', valor: 10 }); renderizarCircuito(); };
+
+            const btnAddCapacitor = document.createElement('button');
+            btnAddCapacitor.className = "bg-teal-700 text-white px-2 py-1 rounded hover:bg-teal-600";
+            btnAddCapacitor.innerText = "➕ Capacitor (C)";
+            btnAddCapacitor.onclick = () => { bloco.elementos.push({ id: 'c_' + (++idCounter), tipoComp: 'C', valor: 0.00001 }); renderizarCircuito(); };
 
             const btnAddSubBloco = document.createElement('button');
             btnAddSubBloco.className = "bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500";
@@ -179,6 +248,7 @@
             btnAddSubBloco.onclick = () => { bloco.elementos.push({ id: 'b_' + (++idCounter), tipo: 'P', elementos: [] }); renderizarCircuito(); };
 
             acoes.appendChild(btnAddResistor);
+            
             acoes.appendChild(btnAddSubBloco);
 
             if (!isRaiz) {
@@ -211,10 +281,14 @@
                 } else {
                     const divRes = document.createElement('div');
                     divRes.className = "flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm text-sm max-w-sm";
+                    
+                    let unidadeText = elem.tipoComp === 'R' ? 'Ω' : 'F';
+                    let rotulo = elem.tipoComp === 'R' ? 'R:' : 'C:';
+
                     divRes.innerHTML = `
-                        <span class="font-medium text-gray-600">R:</span>
-                        <input type="number" min="0" value="${elem.valor}" class="w-16 px-1 py-0.5 border rounded outline-none text-center focus:ring-1 focus:ring-blue-500" />
-                        <span class="text-gray-500">Ω</span>
+                        <span class="font-medium text-gray-600">${rotulo}</span>
+                        <input type="number" step="any" min="0" value="${elem.valor}" class="w-28 px-1 py-0.5 border rounded outline-none text-center focus:ring-1 focus:ring-blue-500" />
+                        <span class="text-gray-500">${unidadeText}</span>
                     `;
                     divRes.querySelector('input').addEventListener('input', (e) => { elem.valor = parseFloat(e.target.value) || 0; });
 
@@ -242,40 +316,59 @@
             return false;
         }
 
-        // ATRIBUI IDENTIFICADORES TÉCNICOS PARA AS CONTAS
-        function rotularResistores(bloco) {
+        function rotularComponentes(bloco) {
             bloco.elementos.forEach(elem => {
                 if (elem.elementos) {
-                    rotularResistores(elem);
+                    rotularComponentes(elem);
                 } else {
-                    elem.tagMapeada = `R_{${contadorResistoresGlobais++}}`;
+                    let tipo = elem.tipoComp || 'R';
+                    elem.tagMapeada = `${tipo}_{${contadorComponentesGlobais[tipo]++}}`;
                 }
             });
         }
 
-        // FASE 1: CALCULAR RESISTÊNCIA EQUIVALENTE
-        function calcularReqEGerarLatex(bloco, numBloco = { val: 1 }) {
+        // FASE 1: CALCULAR EQUIVALÊNCIA DA REDE (Mantém precisão interna total)
+        function calcularEqEGerarLatex(bloco, numBloco = { val: 1 }) {
             if (!bloco.elementos || bloco.elementos.length === 0) { bloco.req = 0; return 0; }
 
-            let valores = bloco.elementos.map(elem => elem.elementos ? calcularReqEGerarLatex(elem, numBloco) : elem.valor);
-            let nomeBloco = bloco.id === 'raiz' ? 'R_{eqTotal}' : `R_{eqB${numBloco.val++}}`;
+            let valores = bloco.elementos.map(elem => elem.elementos ? calcularEqEGerarLatex(elem, numBloco) : elem.valor);
+            
+            let primeiroComp = bloco.elementos.find(e => e.tipoComp || (e.elementos && e.tipoCompDominante));
+            let tipoCompDominante = primeiroComp ? (primeiroComp.tipoComp || primeiroComp.tipoCompDominante) : 'R';
+            bloco.tipoCompDominante = tipoCompDominante;
+
+            let simbolo = tipoCompDominante === 'C' ? 'C' : 'R';
+            let unidade = tipoCompDominante === 'C' ? 'F' : '\\Omega';
+            let nomeBloco = bloco.id === 'raiz' ? `${simbolo}_{eqTotal}` : `${simbolo}_{eqB${numBloco.val++}}`;
             bloco.tagMapeada = nomeBloco; 
             let strLatex = "";
 
-            if (bloco.tipo === 'S') {
+            let ehSomaDireta = (tipoCompDominante === 'R' && bloco.tipo === 'S') || (tipoCompDominante === 'C' && bloco.tipo === 'P');
+
+            if (ehSomaDireta) {
                 bloco.req = valores.reduce((acc, cur) => acc + cur, 0);
                 let expressaoSoma = bloco.elementos.map(e => e.tagMapeada).join(' + ');
+<<<<<<< HEAD
                 let expressaoValores = valores.map(v => `${v.toFixed(redonda)}`).join(' + ');
                 strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
+=======
+                let expressaoValores = valores.map(v => formatarNumeroLatex(v)).join(' + ');
+                strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${formatarNumeroLatex(bloco.req)}\\ ${unidade}$$`;
+>>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
             } else {
                 if (valores.includes(0)) {
                     bloco.req = 0;
-                    strLatex = `$$${nomeBloco} = 0\\ \\Omega\\ (Curto-circuito)$$`;
+                    strLatex = `$$${nomeBloco} = 0\\ ${unidade}$$`;
                 } else {
                     bloco.req = 1 / valores.reduce((acc, cur) => acc + (1 / cur), 0);
                     let expressaoInversos = bloco.elementos.map(e => `\\frac{1}{${e.tagMapeada}}`).join(' + ');
+<<<<<<< HEAD
                     let expressaoValores = valores.map(v => `\\frac{1}{${v.toFixed()}}`).join(' + ');
                     strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
+=======
+                    let expressaoValores = valores.map(v => `\\frac{1}{${formatarNumeroLatex(v)}}`).join(' + ');
+                    strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${formatarNumeroLatex(bloco.req)}\\ ${unidade}$$`;
+>>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                 }
             }
 
@@ -283,45 +376,47 @@
             return bloco.req;
         }
 
-        // FASE 2: CALCULAR TENSÃO E CORRENTE COMPONENTE POR COMPONENTE
-        function calcularGrandezasEGerarLatex(bloco, tensaoAplicada, linhasTabela) {
-            bloco.tensao = tensaoAplicada;
-            bloco.corrente = bloco.req === 0 ? 0 : bloco.tensao / bloco.req;
+        // FASE 2: DISTRIBUIÇÃO DE TENSAO E CORRENTE
+        function calcularGrandezasEGerarLatex(bloco, fonte, linhasTabela) {
+            if (fonte.tipo === 'V') {
+                bloco.tensao = fonte.valor;
+                bloco.corrente = bloco.req === 0 ? 0 : bloco.tensao / bloco.req;
+            } else {
+                bloco.corrente = fonte.valor;
+                bloco.tensao = bloco.corrente * bloco.req;
+            }
 
             bloco.elementos.forEach(elem => {
-                if (bloco.tipo === 'S') {
-                    // Em série, a corrente é igual e a tensão divide proporcionalmente V = I * R
-                    let iComponente = bloco.corrente;
-                    let rComponente = elem.elementos ? elem.req : elem.valor;
-                    let vComponente = iComponente * rComponente;
+                let eqComponente = elem.elementos ? elem.req : elem.valor;
 
-                    let passoLatex = `$$V_{${elem.tagMapeada}} = I_{${bloco.tagMapeada}} \\cdot ${elem.elementos ? 'R_{eq}' : 'R'} = ${iComponente.toFixed(2)}\\ A \\cdot ${rComponente.toFixed(1)}\\ \\Omega = ${vComponente.toFixed(2)}\\ V$$`;
+                if (bloco.tipo === 'S') {
+                    let iComponente = bloco.corrente;
+                    let vComponente = iComponente * eqComponente;
+
+                    let passoLatex = `$$V_{${elem.tagMapeada}} = I_{${bloco.tagMapeada}} \\cdot ${elem.elementos ? 'Eq' : 'Val'} = ${formatarNumeroLatex(iComponente)}\\ A \\cdot ${formatarNumeroLatex(eqComponente)} = ${formatarNumeroLatex(vComponente)}\\ V$$`;
                     passosCalculo.push({ tipo: 'grandezas', eq: passoLatex });
 
                     if (elem.elementos) {
-                        calcularGrandezasEGerarLatex(elem, vComponente, linhasTabela);
+                        calcularGrandezasEGerarLatex(elem, { tipo: 'V', valor: vComponente }, linhasTabela);
                     } else {
-                        linhasTabela.push({ tag: elem.tagMapeada, r: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
+                        linhasTabela.push({ tag: elem.tagMapeada, tipoComp: elem.tipoComp || 'R', val: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
                     }
                 } else {
-                    // Em paralelo, a tensão é igual e a corrente divide de acordo com a resistência I = V / R
                     let vComponente = bloco.tensao;
-                    let rComponente = elem.elementos ? elem.req : elem.valor;
-                    let iComponente = rComponente === 0 ? 0 : vComponente / rComponente;
+                    let iComponente = eqComponente === 0 ? 0 : vComponente / eqComponente;
 
-                    let passoLatex = `$$I_{${elem.tagMapeada}} = \\frac{V_{${bloco.tagMapeada}}}{${elem.elementos ? 'R_{eq}' : 'R'}} = \\frac{${vComponente.toFixed(2)}\\ V}{${rComponente.toFixed(1)}\\ \\Omega} = ${iComponente.toFixed(2)}\\ A$$`;
+                    let passoLatex = `$$I_{${elem.tagMapeada}} = \\frac{V_{${bloco.tagMapeada}}}{${elem.elementos ? 'Eq' : 'Val'}} = \\frac{${formatarNumeroLatex(vComponente)}\\ V}{${formatarNumeroLatex(eqComponente)}} = ${formatarNumeroLatex(iComponente)}\\ A$$`;
                     passosCalculo.push({ tipo: 'grandezas', eq: passoLatex });
 
                     if (elem.elementos) {
-                        calcularGrandezasEGerarLatex(elem, vComponente, linhasTabela);
+                        calcularGrandezasEGerarLatex(elem, { tipo: 'V', valor: vComponente }, linhasTabela);
                     } else {
-                        linhasTabela.push({ tag: elem.tagMapeada, r: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
+                        linhasTabela.push({ tag: elem.tagMapeada, tipoComp: elem.tipoComp || 'R', val: elem.valor, v: vComponente, i: iComponente, p: vComponente * iComponente });
                     }
                 }
             });
         }
 
-        // DIMENSIONAMENTO DINÂMICO DO CANVAS
         function calcularDimensoesNecessarias(bloco) {
             let dimensoes = { largura: 150, alturaSurgida: 120 };
             if (!bloco.elementos || bloco.elementos.length === 0) return dimensoes;
@@ -358,144 +453,143 @@
             return dimensoes;
         }
 
-        function desenharEsquema(bloco, vFonte) {
-    const canvas = document.getElementById('canvas-circuito');
-    const ctx = canvas.getContext('2d');
-    
-    let m = calcularDimensoesNecessarias(bloco);
-    // Adiciona margens seguras para não cortar as bordas
-    canvas.width = Math.max(m.largura + 200, 850); 
-    canvas.height = Math.max(m.alturaSurgida + 160, 385);
+        function desenharEsquema(bloco, fonte) {
+            const canvas = document.getElementById('canvas-circuito');
+            const ctx = canvas.getContext('2d');
+            
+            let m = calcularDimensoesNecessarias(bloco);
+            canvas.width = Math.max(m.largura + 200, 850); 
+            canvas.height = Math.max(m.alturaSurgida + 160, 385);
 
-    // Fundo escuro industrial
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#f8fafc';
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px sans-serif';
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#f8fafc';
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 13px sans-serif';
 
-    let xInicio = 80;
-    let yLinhaSuperior = 80;
-    let yLinhaInferior = canvas.height - 80;
+            let xInicio = 80;
+            let yLinhaSuperior = 80;
+            let yLinhaInferior = canvas.height - 80;
 
-    // 1. Desenhar a Fonte DC (Esquerda)
-    ctx.beginPath();
-    ctx.moveTo(xInicio, yLinhaSuperior);
-    ctx.lineTo(xInicio, (canvas.height/2) - 30);
-    ctx.moveTo(xInicio, (canvas.height/2) + 30);
-    ctx.lineTo(xInicio, yLinhaInferior);
-    ctx.stroke();
+            // Desenhar Fonte
+            ctx.beginPath();
+            ctx.moveTo(xInicio, yLinhaSuperior);
+            ctx.lineTo(xInicio, (canvas.height/2) - 30);
+            ctx.moveTo(xInicio, (canvas.height/2) + 30);
+            ctx.lineTo(xInicio, yLinhaInferior);
+            ctx.stroke();
 
-    let yCentroFonte = canvas.height / 2;
-    ctx.beginPath();
-    ctx.moveTo(xInicio - 15, yCentroFonte - 5); ctx.lineTo(xInicio + 15, yCentroFonte - 5);
-    ctx.moveTo(xInicio - 8, yCentroFonte + 5); ctx.lineTo(xInicio + 8, yCentroFonte + 5);
-    ctx.stroke();
-    
-    ctx.fillText(`+`, xInicio - 4, yCentroFonte - 15);
-    ctx.fillText(`-`, xInicio - 3, yCentroFonte + 20);
-    ctx.fillText(`${vFonte}V`, xInicio - 55, yCentroFonte + 4);
-
-    // 2. Desenha os componentes e captura onde o ÚLTIMO componente terminou (xFinal real)
-    let larguraUtil = canvas.width - xInicio - 80;
-    let xFinalReal = desenharComponenteGenerico(ctx, bloco, xInicio, yLinhaSuperior, larguraUtil);
-
-    // 3. Fecha o circuito descendo exatamente de onde os componentes terminaram!
-    ctx.beginPath();
-    ctx.moveTo(xFinalReal, yLinhaSuperior);
-    ctx.lineTo(xFinalReal, yLinhaInferior); // Desce na direita de forma dinâmica
-    ctx.lineTo(xInicio, yLinhaInferior);    // Volta para o polo negativo da fonte
-    ctx.stroke();
-}
-
-function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
-    if (!bloco.elementos || bloco.elementos.length === 0) {
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + largura, y); ctx.stroke();
-        return x + largura;
-    }
-
-    if (bloco.tipo === 'S') {
-        let xAtual = x;
-        let passoX = largura / bloco.elementos.length;
-
-        bloco.elementos.forEach((elem) => {
-            if (elem.elementos) {
-                // Se for um sub-bloco, passa o bastão e atualiza o x atual com o fim dele
-                xAtual = desenharComponenteGenerico(ctx, elem, xAtual, y, passoX);
-            } else {
-                let xResistor = xAtual + (passoX / 2) - 25;
-                desenharResistorHorizontal(ctx, xResistor, y, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
-                
-                ctx.beginPath();
-                ctx.moveTo(xAtual, y); ctx.lineTo(xResistor, y);
-                ctx.moveTo(xResistor + 50, y); ctx.lineTo(xAtual + passoX, y);
+            let yCentroFonte = canvas.height / 2;
+            ctx.beginPath();
+            if (fonte.tipo === 'V') {
+                ctx.moveTo(xInicio - 15, yCentroFonte - 5); ctx.lineTo(xInicio + 15, yCentroFonte - 5);
+                ctx.moveTo(xInicio - 8, yCentroFonte + 5); ctx.lineTo(xInicio + 8, yCentroFonte + 5);
                 ctx.stroke();
-                
-                xAtual += passoX;
-            }
-        });
-        return xAtual; // Retorna a coordenada exata do fim da série
-    } else {
-        let qtd = bloco.elementos.length;
-        let xBarramentoEsquerdo = x + 25;
-        let xBarramentoDireito = x + largura - 25;
-
-        // Conecta o início do circuito até o barramento esquerdo sem deixar vãos
-        ctx.beginPath();
-        ctx.moveTo(x, y); ctx.lineTo(xBarramentoEsquerdo, y);
-        ctx.stroke();
-
-        let alturaInterna = Math.max(qtd * 55, 110);
-        let yTopoBarra = y - (alturaInterna / 2) + 25;
-        let yBaseBarra = y + (alturaInterna / 2) - 25;
-
-        // Desenha as barras verticais
-        ctx.beginPath();
-        ctx.moveTo(xBarramentoEsquerdo, yTopoBarra); ctx.lineTo(xBarramentoEsquerdo, yBaseBarra);
-        ctx.moveTo(xBarramentoDireito, yTopoBarra); ctx.lineTo(xBarramentoDireito, yBaseBarra);
-        ctx.stroke();
-
-        // Nós principais
-        ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, y, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(xBarramentoDireito, y, 5, 0, Math.PI * 2); ctx.fill();
-
-        let passoY = (yBaseBarra - yTopoBarra) / (qtd > 1 ? (qtd - 1) : 1);
-
-        bloco.elementos.forEach((elem, idx) => {
-            let localY = qtd === 1 ? y : (yTopoBarra + (passoY * idx));
-
-            ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, localY, 3, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(xBarramentoDireito, localY, 3, 0, Math.PI * 2); ctx.fill();
-
-            if (elem.elementos) {
-                let subLargura = xBarramentoDireito - xBarramentoEsquerdo;
-                desenharComponenteGenerico(ctx, elem, xBarramentoEsquerdo, localY, subLargura);
+                ctx.fillText(`+`, xInicio - 4, yCentroFonte - 15);
+                ctx.fillText(`-`, xInicio - 3, yCentroFonte + 20);
+                ctx.fillText(`${fonte.valor}V`, xInicio - 55, yCentroFonte + 4);
             } else {
-                let xRes = xBarramentoEsquerdo + ((xBarramentoDireito - xBarramentoEsquerdo) / 2) - 25;
-                desenharResistorHorizontal(ctx, xRes, localY, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
-                
-                ctx.beginPath();
-                ctx.moveTo(xBarramentoEsquerdo, localY); ctx.lineTo(xRes, localY);
-                ctx.moveTo(xRes + 50, localY); ctx.lineTo(xBarramentoDireito, localY);
+                ctx.arc(xInicio, yCentroFonte, 20, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(xInicio, yCentroFonte + 10); ctx.lineTo(xInicio, yCentroFonte - 10);
+                ctx.lineTo(xInicio - 5, yCentroFonte - 5);
+                ctx.stroke();
+                ctx.fillText(`${fonte.valor}A`, xInicio - 55, yCentroFonte + 4);
             }
-        });
 
-        // Conecta o barramento direito até o final planejado deste bloco
-        ctx.beginPath();
-        ctx.moveTo(xBarramentoDireito, y); ctx.lineTo(x + largura, y);
-        ctx.stroke();
+            let larguraUtil = canvas.width - xInicio - 80;
+            let xFinalReal = desenharComponenteGenerico(ctx, bloco, xInicio, yLinhaSuperior, larguraUtil);
 
-        return x + largura;
-    }
-}
+            ctx.beginPath();
+            ctx.moveTo(xFinalReal, yLinhaSuperior);
+            ctx.lineTo(xFinalReal, yLinhaInferior);
+            ctx.lineTo(xInicio, yLinhaInferior);
+            ctx.stroke();
+        }
 
+        function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
+            if (!bloco.elementos || bloco.elementos.length === 0) {
+                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + largura, y); ctx.stroke();
+                return x + largura;
+            }
 
-        function desenharResistorHorizontal(ctx, x, y, valor, tag) {
+            if (bloco.tipo === 'S') {
+                let xAtual = x;
+                let passoX = largura / bloco.elementos.length;
+
+                bloco.elementos.forEach((elem) => {
+                    if (elem.elementos) {
+                        xAtual = desenharComponenteGenerico(ctx, elem, xAtual, y, passoX);
+                    } else {
+                        let xResistor = xAtual + (passoX / 2) - 25;
+                        desenharBlocoComponente(ctx, xResistor, y, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''), elem.tipoComp);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(xAtual, y); ctx.lineTo(xResistor, y);
+                        ctx.moveTo(xResistor + 50, y); ctx.lineTo(xAtual + passoX, y);
+                        ctx.stroke();
+                        
+                        xAtual += passoX;
+                    }
+                });
+                return xAtual;
+            } else {
+                let qtd = bloco.elementos.length;
+                let xBarramentoEsquerdo = x + 25;
+                let xBarramentoDireito = x + largura - 25;
+
+                ctx.beginPath();
+                ctx.moveTo(x, y); ctx.lineTo(xBarramentoEsquerdo, y);
+                ctx.stroke();
+
+                let alturaInterna = Math.max(qtd * 55, 110);
+                let yTopoBarra = y - (alturaInterna / 2) + 25;
+                let yBaseBarra = y + (alturaInterna / 2) - 25;
+
+                ctx.beginPath();
+                ctx.moveTo(xBarramentoEsquerdo, yTopoBarra); ctx.lineTo(xBarramentoEsquerdo, yBaseBarra);
+                ctx.moveTo(xBarramentoDireito, yTopoBarra); ctx.lineTo(xBarramentoDireito, yBaseBarra);
+                ctx.stroke();
+
+                ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, y, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(xBarramentoDireito, y, 5, 0, Math.PI * 2); ctx.fill();
+
+                let passoY = (yBaseBarra - yTopoBarra) / (qtd > 1 ? (qtd - 1) : 1);
+
+                bloco.elementos.forEach((elem, idx) => {
+                    let localY = qtd === 1 ? y : (yTopoBarra + (passoY * idx));
+
+                    ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, localY, 3, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(xBarramentoDireito, localY, 3, 0, Math.PI * 2); ctx.fill();
+
+                    if (elem.elementos) {
+                        let subLargura = xBarramentoDireito - xBarramentoEsquerdo;
+                        desenharComponenteGenerico(ctx, elem, xBarramentoEsquerdo, localY, subLargura);
+                    } else {
+                        let xRes = xBarramentoEsquerdo + ((xBarramentoDireito - xBarramentoEsquerdo) / 2) - 25;
+                        desenharBlocoComponente(ctx, xRes, localY, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''), elem.tipoComp);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(xBarramentoEsquerdo, localY); ctx.lineTo(xRes, localY);
+                        ctx.moveTo(xRes + 50, localY); ctx.lineTo(xBarramentoDireito, localY);
+                        ctx.stroke();
+                    }
+                });
+
+                ctx.beginPath();
+                ctx.moveTo(xBarramentoDireito, y); ctx.lineTo(x + largura, y);
+                ctx.stroke();
+
+                return x + largura;
+            }
+        }
+
+        function desenharBlocoComponente(ctx, x, y, valor, tag, tipo = 'R') {
             ctx.save();
-            ctx.fillStyle = "#3b82f6"; 
+            ctx.fillStyle = tipo === 'R' ? "#3b82f6" : "#0d9488"; 
             ctx.fillRect(x, y - 12, 50, 24);
             ctx.strokeStyle = "#ffffff";
             ctx.strokeRect(x, y - 12, 50, 24);
@@ -503,7 +597,7 @@ function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
             ctx.font = "bold 10px sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(`${tag}`, x + 25, y - 2);
-            ctx.fillText(`${valor}Ω`, x + 25, y + 9);
+            ctx.fillText(`${valor}${tipo === 'R' ? 'Ω' : 'F'}`, x + 25, y + 9);
             ctx.restore();
         }
 
@@ -515,48 +609,75 @@ function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
             link.click();
         }
 
-        // CONTROLADOR PRINCIPAL DA EXECUÇÃO
         function executarAcoes() {
-            const vFonte = parseFloat(document.getElementById('tensao-fonte').value) || 0;
-            
-            // Inicializa contadores e históricos
-            passosCalculo = [];
-            contadorResistoresGlobais = 1;
+            const tipoFonte = document.getElementById('tipo-fonte').value;
+            const valorFonte = parseFloat(document.getElementById('valor-fonte').value) || 0;
+            const fonte = { tipo: tipoFonte, valor: valorFonte };
 
-            rotularResistores(estruturaCircuito);
+            passosCalculo = [];
+            contadorComponentesGlobais = { R: 1, C: 1 };
+
+            rotularComponentes(estruturaCircuito);
             
-            const reqTotal = calcularReqEGerarLatex(estruturaCircuito);
+            // reqTotal calculado mantendo todas as casas
+            const reqTotal = calcularEqEGerarLatex(estruturaCircuito);
 
             if (reqTotal === 0) {
                 alert("Por favor, monte seu circuito inserindo componentes antes de calcular.");
                 return;
             }
 
-            const correnteTotal = vFonte / reqTotal;
-            const potenciaTotal = vFonte * correnteTotal;
+            let correnteTotal = 0;
+            let tensaoTotal = 0;
 
-            // Insere as equações globais de fechamento da malha principal
-            passosCalculo.push({ tipo: 'malha', eq: `$$I_{Total} = \\frac{V_{Fonte}}{R_{eqTotal}} = \\frac{${vFonte.toFixed(1)}}{${reqTotal.toFixed(2)}} = ${correnteTotal.toFixed(2)}\\ A$$` });
-            passosCalculo.push({ tipo: 'malha', eq: `$$P_{Total} = V_{Fonte} \\cdot I_{Total} = ${vFonte.toFixed(1)} \\cdot ${correnteTotal.toFixed(2)} = ${potenciaTotal.toFixed(2)}\\ W$$` });
+            if (fonte.tipo === 'V') {
+                tensaoTotal = fonte.valor;
+                correnteTotal = fonte.valor / reqTotal;
+            } else {
+                correnteTotal = fonte.valor;
+                tensaoTotal = fonte.valor * reqTotal;
+            }
 
-            // Calcula dinamicamente as tensões e correntes individuais
+            let potenciaTotal = tensaoTotal * correnteTotal;
+
+            // LaTeX da malha principal
+            if (fonte.tipo === 'V') {
+                passosCalculo.push({ tipo: 'malha', eq: `$$I_{Total} = \\frac{V_{Fonte}}{Eq_{Total}} = \\frac{${formatarNumeroLatex(tensaoTotal)}}{${formatarNumeroLatex(reqTotal)}} = ${formatarNumeroLatex(correnteTotal)}\\ A$$` });
+            } else {
+                passosCalculo.push({ tipo: 'malha', eq: `$$V_{Total} = I_{Fonte} \\cdot Eq_{Total} = ${formatarNumeroLatex(correnteTotal)} \\cdot ${formatarNumeroLatex(reqTotal)} = ${formatarNumeroLatex(tensaoTotal)}\\ V$$` });
+            }
+            passosCalculo.push({ tipo: 'malha', eq: `$$P_{Total} = V_{Total} \\cdot I_{Total} = ${formatarNumeroLatex(tensaoTotal)} \\cdot ${formatarNumeroLatex(correnteTotal)} = ${formatarNumeroLatex(potenciaTotal)}\\ W$$` });
+
             let linhasTabela = [];
-            calcularGrandezasEGerarLatex(estruturaCircuito, vFonte, linhasTabela);
+            calcularGrandezasEGerarLatex(estruturaCircuito, fonte, linhasTabela);
 
+<<<<<<< HEAD
             // Interface: Modifica os valores gerais dos cards superiores com formatação de eng
             document.getElementById('res-req').innerText = formatarUnidadeEngenharia(reqTotal, 'Ω');
             document.getElementById('res-corrente').innerText = formatarUnidadeEngenharia(correnteTotal, 'A');
             document.getElementById('res-potencia').innerText = formatarUnidadeEngenharia(potenciaTotal, 'W');
 
             // Interface: Constrói as linhas estáveis na tabela de dados por componente usando formatação de engenharia
+=======
+            let unidadeEq = estruturaCircuito.tipoCompDominante === 'C' ? 'F' : 'Ω';
+            document.getElementById('res-req').innerText = formatarUnidadeEngenharia(reqTotal, unidadeEq);
+            document.getElementById('res-corrente').innerText = formatarUnidadeEngenharia(correnteTotal, 'A');
+            document.getElementById('res-potencia').innerText = formatarUnidadeEngenharia(potenciaTotal, 'W');
+
+>>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
             const tbody = document.getElementById('tabela-detalhes');
             tbody.innerHTML = '';
             linhasTabela.forEach((linha, idx) => {
+                let unidadeComp = linha.tipoComp === 'C' ? 'F' : 'Ω';
                 const tr = document.createElement('tr');
                 tr.className = idx % 2 === 0 ? 'bg-gray-50 hover:bg-slate-100 transition' : 'bg-white hover:bg-slate-100 transition';
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-blue-600">$${linha.tag}$</td>
+<<<<<<< HEAD
                     <td class="p-3">${formatarUnidadeEngenharia(linha.r, 'Ω')}</td>
+=======
+                    <td class="p-3">${formatarUnidadeEngenharia(linha.val, unidadeComp)}</td>
+>>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                     <td class="p-3 font-medium text-amber-600">${formatarUnidadeEngenharia(linha.v, 'V')}</td>
                     <td class="p-3 font-medium text-emerald-600">${formatarUnidadeEngenharia(linha.i, 'A')}</td>
                     <td class="p-3 text-purple-600">${formatarUnidadeEngenharia(linha.p, 'W')}</td>
@@ -564,42 +685,37 @@ function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
                 tbody.appendChild(tr);
             });
 
-            // Interface: Separa e estrutura o painel do memorial de cálculos em blocos lógicos ordenados
             const containerLatex = document.getElementById('memorial-latex');
             containerLatex.innerHTML = '';
 
             let categorias = [
-                { id: 'req', titulo: '1. Simplificação das Resistências Equivalentes ($R_{eq}$)' },
-                { id: 'malha', titulo: '2. Análise da Malha Principal da Fonte' },
-                { id: 'grandezas', titulo: '3. Queda de Tensão ($V$) e Corrente ($I$) por Elemento' }
+                { id: 'req', titulo: '1. Simplificação e Equivalências' },
+                { id: 'malha', titulo: '2. Análise da Fonte e Malha Principal' },
+                { id: 'grandezas', titulo: '3. Tensão e Corrente por Componente/Bloco' }
             ];
 
             categorias.forEach(cat => {
-                let filtrados = passosCalculo.filter(p => p.tipo === cat.id);
-                if(filtrados.length > 0) {
+                let passos = passosCalculo.filter(p => p.tipo === cat.id);
+                if (passos.length > 0) {
                     let divCat = document.createElement('div');
-                    divCat.className = "mb-6";
-                    divCat.innerHTML = `<h4 class="font-bold text-slate-800 text-base border-b pb-1 mb-3 text-left">${cat.titulo}</h4>`;
-                    
-                    filtrados.forEach((item, idx) => {
-                        divCat.innerHTML += `
-                            <div class="p-2.5 my-2 bg-slate-50 border-l-4 border-blue-500 rounded text-sm">
-                                <span class="text-xs text-slate-400 font-bold uppercase block mb-0.5">Etapa #${idx+1}</span>
-                                <div>${item.eq}</div>
-                            </div>`;
+                    divCat.className = "mb-4";
+                    divCat.innerHTML = `<h4 class="font-bold text-slate-800 border-b pb-1 mb-2">${cat.titulo}</h4>`;
+                    passos.forEach(p => {
+                        let divEq = document.createElement('div');
+                        divEq.className = "py-1 text-slate-700";
+                        divEq.innerHTML = p.eq;
+                        divCat.appendChild(divEq);
                     });
                     containerLatex.appendChild(divCat);
                 }
             });
 
-            // Avisa o MathJax para re-renderizar todas as novas fórmulas em LaTeX injetadas
+            document.getElementById('painel-resultados').classList.remove('hidden');
+            desenharEsquema(estruturaCircuito, fonte);
+
             if (window.MathJax) {
                 MathJax.typesetPromise();
             }
-
-            document.getElementById('painel-resultados').classList.remove('hidden');
-            desenharEsquema(estruturaCircuito, vFonte);
-            document.getElementById('painel-resultados').scrollIntoView({ behavior: 'smooth' });
         }
     </script>
     <script>
