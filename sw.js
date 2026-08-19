@@ -1,4 +1,4 @@
-const CACHE_NAME = 'circuito-simulador-v3';
+const CACHE_NAME = 'circuito-simulador-v4';
 const ASSETS = [
   './',
   './index.html',
