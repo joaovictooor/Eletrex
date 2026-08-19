@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
   "short_name": "CircuitoMisto",
-  "name": "Simulador de Circuito Misto Proporcional",
+  "name": "ELETREX",
   "description": "Simulador offline para análise de circuitos mistos.",
   "lang": "pt-BR",
   "dir": "ltr",
