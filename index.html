@@ -18,6 +18,7 @@
         .bloco-S { border-color: #3b82f6; background-color: #eff6ff; }
         .bloco-P { border-color: #10b981; background-color: #ecfdf5; }
     </style>
+    <link rel="manifest" href="manifest.json">
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 min-h-screen py-10 px-4">
 
@@ -87,14 +88,14 @@
                         <thead>
                             <tr class="bg-slate-800 text-white text-sm uppercase">
                                 <th class="p-3.5">Componente</th>
-                                <th class="p-3.5">Resistência ($\Omega$)</th>
-                                <th class="p-3.5">Tensão ($V$)</th>
-                                <th class="p-3.5">Corrente ($A$)</th>
-                                <th class="p-3.5">Potência ($W$)</th>
+                                <th class="p-3.5">Resistência</th>
+                                <th class="p-3.5">Tensão</th>
+                                <th class="p-3.5">Corrente</th>
+                                <th class="p-3.5">Potência</th>
                             </tr>
                         </thead>
                         <tbody id="tabela-detalhes" class="divide-y text-sm text-gray-700">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -102,7 +103,7 @@
             <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h3 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">Docs 📝 Memorial de Cálculo Passo a Passo</h3>
                 <div id="memorial-latex" class="space-y-4 text-base overflow-x-auto p-2 bg-white rounded-lg border">
-                    </div>
+                </div>
             </div>
 
         </div>
@@ -110,9 +111,30 @@
 
     <script>
         let idCounter = 0;
+        let redonda = 4;
         let estruturaCircuito = { id: 'raiz', tipo: 'S', elementos: [] };
         let passosCalculo = []; 
         let contadorResistoresGlobais = 1;
+
+        // Função para formatar valores com numeração de engenharia (m, k, M, etc)
+        function formatarUnidadeEngenharia(valor, unidade) {
+            if (valor === 0 || isNaN(valor)) return `0.00 ${unidade}`;
+            const absValor = Math.abs(valor);
+            
+            if (absValor >= 1e6) {
+                return `${(valor / 1e6).toFixed(2)} M${unidade}`;
+            } else if (absValor >= 1e3) {
+                return `${(valor / 1e3).toFixed(2)} k${unidade}`;
+            } else if (absValor >= 1) {
+                return `${valor.toFixed(2)} ${unidade}`;
+            } else if (absValor >= 1e-3) {
+                return `${(valor * 1e3).toFixed(2)} m${unidade}`;
+            } else if (absValor >= 1e-6) {
+                return `${(valor * 1e6).toFixed(2)} µ${unidade}`;
+            } else {
+                return `${(valor * 1e9).toFixed(2)} n${unidade}`;
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const tipoRaizSelect = document.getElementById('tipo-raiz');
@@ -239,7 +261,7 @@
             if (bloco.tipo === 'S') {
                 bloco.req = valores.reduce((acc, cur) => acc + cur, 0);
                 let expressaoSoma = bloco.elementos.map(e => e.tagMapeada).join(' + ');
-                let expressaoValores = valores.map(v => `${v.toFixed(1)}`).join(' + ');
+                let expressaoValores = valores.map(v => `${v.toFixed(redonda)}`).join(' + ');
                 strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
             } else {
                 if (valores.includes(0)) {
@@ -248,7 +270,7 @@
                 } else {
                     bloco.req = 1 / valores.reduce((acc, cur) => acc + (1 / cur), 0);
                     let expressaoInversos = bloco.elementos.map(e => `\\frac{1}{${e.tagMapeada}}`).join(' + ');
-                    let expressaoValores = valores.map(v => `\\frac{1}{${v.toFixed(1)}}`).join(' + ');
+                    let expressaoValores = valores.map(v => `\\frac{1}{${v.toFixed()}}`).join(' + ');
                     strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
                 }
             }
@@ -499,12 +521,12 @@
             let linhasTabela = [];
             calcularGrandezasEGerarLatex(estruturaCircuito, vFonte, linhasTabela);
 
-            // Interface: Modifica os valores gerais dos cards superiores
-            document.getElementById('res-req').innerText = `${reqTotal.toFixed(2)} Ω`;
-            document.getElementById('res-corrente').innerText = `${correnteTotal.toFixed(2)} A`;
-            document.getElementById('res-potencia').innerText = `${potenciaTotal.toFixed(2)} W`;
+            // Interface: Modifica os valores gerais dos cards superiores com formatação de eng
+            document.getElementById('res-req').innerText = formatarUnidadeEngenharia(reqTotal, 'Ω');
+            document.getElementById('res-corrente').innerText = formatarUnidadeEngenharia(correnteTotal, 'A');
+            document.getElementById('res-potencia').innerText = formatarUnidadeEngenharia(potenciaTotal, 'W');
 
-            // Interface: Constrói as linhas estáveis na tabela de dados por componente
+            // Interface: Constrói as linhas estáveis na tabela de dados por componente usando formatação de engenharia
             const tbody = document.getElementById('tabela-detalhes');
             tbody.innerHTML = '';
             linhasTabela.forEach((linha, idx) => {
@@ -512,10 +534,10 @@
                 tr.className = idx % 2 === 0 ? 'bg-gray-50 hover:bg-slate-100 transition' : 'bg-white hover:bg-slate-100 transition';
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-blue-600">$${linha.tag}$</td>
-                    <td class="p-3">${linha.r.toFixed(2)} $\Omega$</td>
-                    <td class="p-3 font-medium text-amber-600">${linha.v.toFixed(2)} V</td>
-                    <td class="p-3 font-medium text-emerald-600">${linha.i.toFixed(2)} A</td>
-                    <td class="p-3 text-purple-600">${linha.p.toFixed(2)} W</td>
+                    <td class="p-3">${formatarUnidadeEngenharia(linha.r, 'Ω')}</td>
+                    <td class="p-3 font-medium text-amber-600">${formatarUnidadeEngenharia(linha.v, 'V')}</td>
+                    <td class="p-3 font-medium text-emerald-600">${formatarUnidadeEngenharia(linha.i, 'A')}</td>
+                    <td class="p-3 text-purple-600">${formatarUnidadeEngenharia(linha.p, 'W')}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -558,5 +580,14 @@
             document.getElementById('painel-resultados').scrollIntoView({ behavior: 'smooth' });
         }
     </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado com sucesso!', reg))
+        .catch(err => console.log('Erro ao registrar Service Worker:', err));
+    });
+  }
+</script>
 </body>
 </html>
