@@ -97,11 +97,7 @@
                         <thead>
                             <tr class="bg-slate-800 text-white text-sm uppercase">
                                 <th class="p-3.5">Componente</th>
-<<<<<<< HEAD
-                                <th class="p-3.5">Resistência</th>
-=======
                                 <th class="p-3.5">Valor Nominal</th>
->>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                                 <th class="p-3.5">Tensão</th>
                                 <th class="p-3.5">Corrente</th>
                                 <th class="p-3.5">Potência</th>
@@ -248,7 +244,7 @@
             btnAddSubBloco.onclick = () => { bloco.elementos.push({ id: 'b_' + (++idCounter), tipo: 'P', elementos: [] }); renderizarCircuito(); };
 
             acoes.appendChild(btnAddResistor);
-            
+            acoes.appendChild(btnAddCapacitor);
             acoes.appendChild(btnAddSubBloco);
 
             if (!isRaiz) {
@@ -348,13 +344,8 @@
             if (ehSomaDireta) {
                 bloco.req = valores.reduce((acc, cur) => acc + cur, 0);
                 let expressaoSoma = bloco.elementos.map(e => e.tagMapeada).join(' + ');
-<<<<<<< HEAD
-                let expressaoValores = valores.map(v => `${v.toFixed(redonda)}`).join(' + ');
-                strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
-=======
                 let expressaoValores = valores.map(v => formatarNumeroLatex(v)).join(' + ');
                 strLatex = `$$${nomeBloco} = ${expressaoSoma} = ${expressaoValores} = ${formatarNumeroLatex(bloco.req)}\\ ${unidade}$$`;
->>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
             } else {
                 if (valores.includes(0)) {
                     bloco.req = 0;
@@ -362,13 +353,8 @@
                 } else {
                     bloco.req = 1 / valores.reduce((acc, cur) => acc + (1 / cur), 0);
                     let expressaoInversos = bloco.elementos.map(e => `\\frac{1}{${e.tagMapeada}}`).join(' + ');
-<<<<<<< HEAD
-                    let expressaoValores = valores.map(v => `\\frac{1}{${v.toFixed()}}`).join(' + ');
-                    strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${bloco.req.toFixed(2)}\\ \\Omega$$`;
-=======
                     let expressaoValores = valores.map(v => `\\frac{1}{${formatarNumeroLatex(v)}}`).join(' + ');
                     strLatex = `$$\\frac{1}{${nomeBloco}} = ${expressaoInversos} = ${expressaoValores} \\implies ${nomeBloco} = ${formatarNumeroLatex(bloco.req)}\\ ${unidade}$$`;
->>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                 }
             }
 
@@ -651,20 +637,11 @@
             let linhasTabela = [];
             calcularGrandezasEGerarLatex(estruturaCircuito, fonte, linhasTabela);
 
-<<<<<<< HEAD
-            // Interface: Modifica os valores gerais dos cards superiores com formatação de eng
-            document.getElementById('res-req').innerText = formatarUnidadeEngenharia(reqTotal, 'Ω');
-            document.getElementById('res-corrente').innerText = formatarUnidadeEngenharia(correnteTotal, 'A');
-            document.getElementById('res-potencia').innerText = formatarUnidadeEngenharia(potenciaTotal, 'W');
-
-            // Interface: Constrói as linhas estáveis na tabela de dados por componente usando formatação de engenharia
-=======
             let unidadeEq = estruturaCircuito.tipoCompDominante === 'C' ? 'F' : 'Ω';
             document.getElementById('res-req').innerText = formatarUnidadeEngenharia(reqTotal, unidadeEq);
             document.getElementById('res-corrente').innerText = formatarUnidadeEngenharia(correnteTotal, 'A');
             document.getElementById('res-potencia').innerText = formatarUnidadeEngenharia(potenciaTotal, 'W');
 
->>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
             const tbody = document.getElementById('tabela-detalhes');
             tbody.innerHTML = '';
             linhasTabela.forEach((linha, idx) => {
@@ -673,11 +650,7 @@
                 tr.className = idx % 2 === 0 ? 'bg-gray-50 hover:bg-slate-100 transition' : 'bg-white hover:bg-slate-100 transition';
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-blue-600">$${linha.tag}$</td>
-<<<<<<< HEAD
-                    <td class="p-3">${formatarUnidadeEngenharia(linha.r, 'Ω')}</td>
-=======
                     <td class="p-3">${formatarUnidadeEngenharia(linha.val, unidadeComp)}</td>
->>>>>>> 9e3909e900eb815bde4530966cd1f87f12ed89e4
                     <td class="p-3 font-medium text-amber-600">${formatarUnidadeEngenharia(linha.v, 'V')}</td>
                     <td class="p-3 font-medium text-emerald-600">${formatarUnidadeEngenharia(linha.i, 'A')}</td>
                     <td class="p-3 text-purple-600">${formatarUnidadeEngenharia(linha.p, 'W')}</td>

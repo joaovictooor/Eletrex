@@ -1,4 +1,4 @@
-const CACHE_NAME = 'circuito-simulador-v2';
+const CACHE_NAME = 'circuito-simulador-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -46,7 +46,13 @@ self.addEventListener('fetch', (e) => {
         return response;
       });
 
-      return cachedResponse || networkResponse.catch(() => caches.match('./index.html'));
+      if (cachedResponse) return cachedResponse;
+      return networkResponse.catch(() => {
+        if (e.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+        return Response.error();
+      });
     })
   );
 });
