@@ -354,122 +354,140 @@
             return dimensoes;
         }
 
-        // MOTOR RENDERIZADOR CANVAS
         function desenharEsquema(bloco, vFonte) {
-            const canvas = document.getElementById('canvas-circuito');
-            const ctx = canvas.getContext('2d');
-            
-            let m = calcularDimensoesNecessarias(bloco);
-            canvas.width = Math.max(m.largura + 180, 850); 
-            canvas.height = Math.max(m.alturaSurgida + 150, 385);
+    const canvas = document.getElementById('canvas-circuito');
+    const ctx = canvas.getContext('2d');
+    
+    let m = calcularDimensoesNecessarias(bloco);
+    // Adiciona margens seguras para não cortar as bordas
+    canvas.width = Math.max(m.largura + 200, 850); 
+    canvas.height = Math.max(m.alturaSurgida + 160, 385);
 
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fundo escuro industrial
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = '#f8fafc';
-            ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 13px sans-serif';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#f8fafc';
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 13px sans-serif';
 
-            let margemEsquerda = 80;
-            let margemDireita = canvas.width - 60;
-            let yLinhaSuperior = 80;
-            let yLinhaInferior = canvas.height - 80;
+    let xInicio = 80;
+    let yLinhaSuperior = 80;
+    let yLinhaInferior = canvas.height - 80;
 
-            // Fonte de Tensão
-            ctx.beginPath();
-            ctx.moveTo(margemEsquerda, yLinhaSuperior);
-            ctx.lineTo(margemEsquerda, (canvas.height/2) - 30);
-            ctx.moveTo(margemEsquerda, (canvas.height/2) + 30);
-            ctx.lineTo(margemEsquerda, yLinhaInferior);
-            ctx.stroke();
+    // 1. Desenhar a Fonte DC (Esquerda)
+    ctx.beginPath();
+    ctx.moveTo(xInicio, yLinhaSuperior);
+    ctx.lineTo(xInicio, (canvas.height/2) - 30);
+    ctx.moveTo(xInicio, (canvas.height/2) + 30);
+    ctx.lineTo(xInicio, yLinhaInferior);
+    ctx.stroke();
 
-            let yCentroFonte = canvas.height / 2;
-            ctx.beginPath();
-            ctx.moveTo(65, yCentroFonte - 5); ctx.lineTo(95, yCentroFonte - 5);
-            ctx.moveTo(72, yCentroFonte + 5); ctx.lineTo(88, yCentroFonte + 5);
-            ctx.stroke();
-            
-            ctx.fillText(`+`, 76, yCentroFonte - 15);
-            ctx.fillText(`-`, 77, yCentroFonte + 22);
-            ctx.fillText(`${vFonte}V`, 25, yCentroFonte + 4);
+    let yCentroFonte = canvas.height / 2;
+    ctx.beginPath();
+    ctx.moveTo(xInicio - 15, yCentroFonte - 5); ctx.lineTo(xInicio + 15, yCentroFonte - 5);
+    ctx.moveTo(xInicio - 8, yCentroFonte + 5); ctx.lineTo(xInicio + 8, yCentroFonte + 5);
+    ctx.stroke();
+    
+    ctx.fillText(`+`, xInicio - 4, yCentroFonte - 15);
+    ctx.fillText(`-`, xInicio - 3, yCentroFonte + 20);
+    ctx.fillText(`${vFonte}V`, xInicio - 55, yCentroFonte + 4);
 
-            // Linha inferior limpa de retorno
-            ctx.beginPath();
-            ctx.moveTo(margemEsquerda, yLinhaInferior);
-            ctx.lineTo(margemDireita, yLinhaInferior);
-            ctx.lineTo(margemDireita, yLinhaSuperior);
-            ctx.stroke();
+    // 2. Desenha os componentes e captura onde o ÚLTIMO componente terminou (xFinal real)
+    let larguraUtil = canvas.width - xInicio - 80;
+    let xFinalReal = desenharComponenteGenerico(ctx, bloco, xInicio, yLinhaSuperior, larguraUtil);
 
-            let larguraUtil = margemDireita - margemEsquerda;
-            desenharComponenteGenerico(ctx, bloco, margemEsquerda, yLinhaSuperior, larguraUtil);
-        }
+    // 3. Fecha o circuito descendo exatamente de onde os componentes terminaram!
+    ctx.beginPath();
+    ctx.moveTo(xFinalReal, yLinhaSuperior);
+    ctx.lineTo(xFinalReal, yLinhaInferior); // Desce na direita de forma dinâmica
+    ctx.lineTo(xInicio, yLinhaInferior);    // Volta para o polo negativo da fonte
+    ctx.stroke();
+}
 
-        function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
-            if (!bloco.elementos || bloco.elementos.length === 0) {
-                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + largura, y); ctx.stroke();
-                return;
-            }
+function desenharComponenteGenerico(ctx, bloco, x, y, largura) {
+    if (!bloco.elementos || bloco.elementos.length === 0) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + largura, y); ctx.stroke();
+        return x + largura;
+    }
 
-            if (bloco.tipo === 'S') {
-                let passoX = largura / bloco.elementos.length;
-                bloco.elementos.forEach((elem, idx) => {
-                    let currentX = x + (idx * passoX);
-                    if (elem.elementos) {
-                        desenharComponenteGenerico(ctx, elem, currentX, y, passoX);
-                    } else {
-                        let xResistor = currentX + (passoX / 2) - 25;
-                        desenharResistorHorizontal(ctx, xResistor, y, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
-                        ctx.beginPath();
-                        ctx.moveTo(currentX, y); ctx.lineTo(xResistor, y);
-                        ctx.moveTo(xResistor + 50, y); ctx.lineTo(currentX + passoX, y);
-                        ctx.stroke();
-                    }
-                });
+    if (bloco.tipo === 'S') {
+        let xAtual = x;
+        let passoX = largura / bloco.elementos.length;
+
+        bloco.elementos.forEach((elem) => {
+            if (elem.elementos) {
+                // Se for um sub-bloco, passa o bastão e atualiza o x atual com o fim dele
+                xAtual = desenharComponenteGenerico(ctx, elem, xAtual, y, passoX);
             } else {
-                let qtd = bloco.elementos.length;
-                let xBarramentoEsquerdo = x + 35;
-                let xBarramentoDireito = x + largura - 35;
-
+                let xResistor = xAtual + (passoX / 2) - 25;
+                desenharResistorHorizontal(ctx, xResistor, y, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
+                
                 ctx.beginPath();
-                ctx.moveTo(x, y); ctx.lineTo(xBarramentoEsquerdo, y);
-                ctx.moveTo(xBarramentoDireito, y); ctx.lineTo(x + largura, y);
+                ctx.moveTo(xAtual, y); ctx.lineTo(xResistor, y);
+                ctx.moveTo(xResistor + 50, y); ctx.lineTo(xAtual + passoX, y);
                 ctx.stroke();
-
-                let alturaInterna = Math.max(qtd * 55, 110);
-                let yTopoBarra = y - (alturaInterna / 2) + 25;
-                let yBaseBarra = y + (alturaInterna / 2) - 25;
-
-                ctx.beginPath();
-                ctx.moveTo(xBarramentoEsquerdo, yTopoBarra); ctx.lineTo(xBarramentoEsquerdo, yBaseBarra);
-                ctx.moveTo(xBarramentoDireito, yTopoBarra); ctx.lineTo(xBarramentoDireito, yBaseBarra);
-                ctx.stroke();
-
-                ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, y, 5, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(xBarramentoDireito, y, 5, 0, Math.PI * 2); ctx.fill();
-
-                let passoY = (yBaseBarra - yTopoBarra) / (qtd > 1 ? (qtd - 1) : 1);
-
-                bloco.elementos.forEach((elem, idx) => {
-                    let localY = qtd === 1 ? y : (yTopoBarra + (passoY * idx));
-
-                    ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, localY, 3, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(xBarramentoDireito, localY, 3, 0, Math.PI * 2); ctx.fill();
-
-                    if (elem.elementos) {
-                        let subLargura = xBarramentoDireito - xBarramentoEsquerdo;
-                        desenharComponenteGenerico(ctx, elem, xBarramentoEsquerdo, localY, subLargura);
-                    } else {
-                        let xRes = xBarramentoEsquerdo + ((xBarramentoDireito - xBarramentoEsquerdo) / 2) - 25;
-                        desenharResistorHorizontal(ctx, xRes, localY, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
-                        ctx.beginPath();
-                        ctx.moveTo(xBarramentoEsquerdo, localY); ctx.lineTo(xRes, localY);
-                        ctx.moveTo(xRes + 50, localY); ctx.lineTo(xBarramentoDireito, localY);
-                        ctx.stroke();
-                    }
-                });
+                
+                xAtual += passoX;
             }
-        }
+        });
+        return xAtual; // Retorna a coordenada exata do fim da série
+    } else {
+        let qtd = bloco.elementos.length;
+        let xBarramentoEsquerdo = x + 25;
+        let xBarramentoDireito = x + largura - 25;
+
+        // Conecta o início do circuito até o barramento esquerdo sem deixar vãos
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(xBarramentoEsquerdo, y);
+        ctx.stroke();
+
+        let alturaInterna = Math.max(qtd * 55, 110);
+        let yTopoBarra = y - (alturaInterna / 2) + 25;
+        let yBaseBarra = y + (alturaInterna / 2) - 25;
+
+        // Desenha as barras verticais
+        ctx.beginPath();
+        ctx.moveTo(xBarramentoEsquerdo, yTopoBarra); ctx.lineTo(xBarramentoEsquerdo, yBaseBarra);
+        ctx.moveTo(xBarramentoDireito, yTopoBarra); ctx.lineTo(xBarramentoDireito, yBaseBarra);
+        ctx.stroke();
+
+        // Nós principais
+        ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(xBarramentoDireito, y, 5, 0, Math.PI * 2); ctx.fill();
+
+        let passoY = (yBaseBarra - yTopoBarra) / (qtd > 1 ? (qtd - 1) : 1);
+
+        bloco.elementos.forEach((elem, idx) => {
+            let localY = qtd === 1 ? y : (yTopoBarra + (passoY * idx));
+
+            ctx.beginPath(); ctx.arc(xBarramentoEsquerdo, localY, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(xBarramentoDireito, localY, 3, 0, Math.PI * 2); ctx.fill();
+
+            if (elem.elementos) {
+                let subLargura = xBarramentoDireito - xBarramentoEsquerdo;
+                desenharComponenteGenerico(ctx, elem, xBarramentoEsquerdo, localY, subLargura);
+            } else {
+                let xRes = xBarramentoEsquerdo + ((xBarramentoDireito - xBarramentoEsquerdo) / 2) - 25;
+                desenharResistorHorizontal(ctx, xRes, localY, elem.valor, elem.tagMapeada.replace(/[{}]/g, ''));
+                
+                ctx.beginPath();
+                ctx.moveTo(xBarramentoEsquerdo, localY); ctx.lineTo(xRes, localY);
+                ctx.moveTo(xRes + 50, localY); ctx.lineTo(xBarramentoDireito, localY);
+                ctx.stroke();
+            }
+        });
+
+        // Conecta o barramento direito até o final planejado deste bloco
+        ctx.beginPath();
+        ctx.moveTo(xBarramentoDireito, y); ctx.lineTo(x + largura, y);
+        ctx.stroke();
+
+        return x + largura;
+    }
+}
+
 
         function desenharResistorHorizontal(ctx, x, y, valor, tag) {
             ctx.save();
